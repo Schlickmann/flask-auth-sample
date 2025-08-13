@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from flask_login import LoginManager, login_user, current_user
+from flask_login import LoginManager, login_user, current_user, logout_user, login_required
 
 from database import db
 from models.user import User
@@ -36,7 +36,13 @@ def login():
             return jsonify({'message': 'User logged in successfully'})
 
     return jsonify({'message': 'Invalid credentials'}), 400
-    
+
+@app.route('/logout', methods=['GET'])
+@login_required
+def logout():
+
+    logout_user()
+    return jsonify({'message': 'User logged out successfully'})
 
 @app.route('/')
 def home():
