@@ -88,10 +88,12 @@ def update_user(user_id):
 @login_required
 def delete_user(user_id):
     user = User.query.get(user_id)
-    if user:
+    if user and user != current_user:
         db.session.delete(user)
         db.session.commit()
         return jsonify({'message': 'User deleted successfully'}), 200
+    else:
+        return jsonify({'message': 'Cannot delete current user'}), 403
     return jsonify({'message': 'User not found'}), 404
 
 if __name__ == '__main__':
