@@ -2,3 +2,7 @@ Flask==2.3.0
 Flask-SQLAlchemy==3.1.1
 Flask-Login==0.6.2
 Werkzeug==2.3.0
+pymysql==1.1.0
+cryptography==41.0.7
+python-dotenv==1.0.0
+bcrypt==4.2.1

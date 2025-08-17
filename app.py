@@ -1,13 +1,23 @@
 from flask import Flask, request, jsonify
 from flask_login import LoginManager, login_user, current_user, logout_user, login_required
+import os
+from dotenv import load_dotenv
+import bcrypt
+
+# Load environment variables
+load_dotenv()
 
 from database import db
 from models.user import User
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+
+# Database configuration with proper format and environment variables
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL',
+)
 
 login_manager = LoginManager()
 # Initialize the database
@@ -30,7 +40,7 @@ def login():
     if username and password:
         user = User.query.filter_by(username=username).first()
 
-        if user and user.password == password:
+        if user and bcrypt.checkpw(str.encode(password), str.encode(user.password)):
             login_user(user)
             print(current_user.is_authenticated)
             return jsonify({'message': 'User logged in successfully'})
@@ -51,7 +61,8 @@ def create_user():
     password = data.get('password')
 
     if username and password:
-        user = User(username=username, password=password)
+        hashed_password = bcrypt.hashpw(str.encode(password), bcrypt.gensalt())
+        user = User(username=username, password=hashed_password, role='user')
         db.session.add(user)
         db.session.commit()
         return jsonify({'message': 'User created successfully'}), 200
@@ -76,6 +87,9 @@ def update_user(user_id):
     data = request.json
     password = data.get('password')
 
+    if user_id != current_user.id and current_user.role == 'user':
+        return jsonify({'message': 'You are not authorized to update this user'}), 403
+    
     if user and password:
         user.password = password
 
@@ -88,12 +102,18 @@ def update_user(user_id):
 @login_required
 def delete_user(user_id):
     user = User.query.get(user_id)
-    if user and user != current_user:
+    
+    if current_user.role != 'admin':
+        return jsonify({'message': 'You are not authorized to delete this user'}), 403
+    
+    if user_id == current_user.id:
+        return jsonify({'message': 'You cannot delete your own account'}), 403
+  
+    if user:
         db.session.delete(user)
         db.session.commit()
         return jsonify({'message': 'User deleted successfully'}), 200
-    else:
-        return jsonify({'message': 'Cannot delete current user'}), 403
+
     return jsonify({'message': 'User not found'}), 404
 
 if __name__ == '__main__':
